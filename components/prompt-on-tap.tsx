@@ -1,11 +1,20 @@
 "use client";
 
-import type { AI } from "@/components/ai-context";
-import { useActions, useUIState } from "ai/rsc";
+import { useChat } from "@ai-sdk/react";
 import { useCallback } from "react";
 import { TouchableOpacityProps } from "react-native";
 import TouchableBounce from "./ui/TouchableBounce";
-import { UserMessage } from "./user-message";
+
+// Helper to get API URL
+function getApiUrl() {
+  if (typeof window !== "undefined") {
+    // Web: use relative URL
+    return "/api/chat";
+  }
+  // Native: use localhost or your server URL
+  const host = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8081";
+  return `${host}/api/chat`;
+}
 
 export function PromptOnTap({
   prompt,
@@ -26,21 +35,18 @@ export function PromptOnTap({
 }
 
 function usePromptOnPress(prompt: string | [string, string]) {
-  const [, setMessages] = useUIState<typeof AI>();
-  const { onSubmit } = useActions<typeof AI>();
+  const { append } = useChat({
+    api: getApiUrl(),
+  });
 
   return useCallback(async () => {
     const [displayPrompt, detailedPrompt] = Array.isArray(prompt)
       ? prompt
       : [prompt, prompt];
-    setMessages((currentMessages: any[]) => [
-      ...currentMessages,
-      {
-        id: Date.now(),
-        display: <UserMessage>{displayPrompt}</UserMessage>,
-      },
-    ]);
-    const response = await onSubmit(detailedPrompt);
-    setMessages((currentMessages: any[]) => [...currentMessages, response]);
-  }, [setMessages, onSubmit, prompt]);
+    // Use append to send the message
+    await append({
+      role: "user",
+      content: detailedPrompt,
+    });
+  }, [append, prompt]);
 }

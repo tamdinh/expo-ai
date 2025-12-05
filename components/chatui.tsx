@@ -1,13 +1,12 @@
 "use client";
 
-import { useActions, useAIState, useUIState } from "ai/rsc";
+import { useChat } from "@ai-sdk/react";
 import React from "react";
 import { View } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Stack } from "expo-router";
-import { AI } from "./ai-context";
 import { ChatToolbarInner } from "./chat-toolbar";
 import { KeyboardFriendlyScrollView } from "./keyboard-friendly-scrollview";
 import { HeaderButton } from "./ui/Header";
@@ -19,14 +18,25 @@ import { nanoid } from "@/util/nanoid";
 import { tw } from "@/util/tw";
 import { AnimatedLogo } from "./animated-logo";
 import { ChatContainer } from "./chat-container";
+import MarkdownText from "./markdown-text";
+import { UserMessage } from "./user-message";
+import { ToolInvocation } from "./tool-invocation";
 
 const HEADER_HEIGHT = 0;
 
-function MessagesScrollView() {
-  const [messages] = useUIState<typeof AI>();
+// Helper to get API URL
+function getApiUrl() {
+  if (typeof window !== "undefined") {
+    // Web: use relative URL
+    return "/api/chat";
+  }
+  // Native: use localhost or your server URL
+  const host = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8081";
+  return `${host}/api/chat`;
+}
 
+function MessagesScrollView({ messages }: { messages: ReturnType<typeof useChat>["messages"] }) {
   const { top } = useSafeAreaInsets();
-
   const textInputHeight = 8 + 36;
 
   return (
@@ -44,12 +54,27 @@ function MessagesScrollView() {
           flex: messages.length ? undefined : 1,
         }}
       >
-        {
-          // View messages in UI state
-          messages.map((message) => (
-            <View key={message.id}>{message.display}</View>
-          ))
-        }
+        {messages.map((message) => (
+          <View key={message.id}>
+            {message.role === "user" ? (
+              <UserMessage>{message.content}</UserMessage>
+            ) : (
+              <>
+                {message.content && (
+                  <MarkdownText done={message.finishReason !== null}>
+                    {message.content}
+                  </MarkdownText>
+                )}
+                {message.toolInvocations?.map((toolInvocation, index) => (
+                  <ToolInvocation
+                    key={`${toolInvocation.toolCallId}-${index}`}
+                    toolInvocation={toolInvocation}
+                  />
+                ))}
+              </>
+            )}
+          </View>
+        ))}
       </KeyboardFriendlyScrollView>
       {messages.length === 0 && <AnimatedLogo />}
     </>
@@ -57,8 +82,12 @@ function MessagesScrollView() {
 }
 
 export function ChatUI() {
-  const [, setAIState] = useAIState<typeof AI>();
-  const [messages, setMessages] = useUIState<typeof AI>();
+  // Use a single useChat instance for the entire chat
+  const chat = useChat({
+    api: getApiUrl(),
+  });
+
+  const { messages, setMessages, input, setInput, handleSubmit, isLoading } = chat;
 
   return (
     <ChatContainer>
@@ -83,7 +112,6 @@ export function ChatUI() {
                         },
                   ]}
                   onPress={() => {
-                    setAIState({ chatId: nanoid(), messages: [] });
                     setMessages([]);
                   }}
                 >
@@ -95,22 +123,43 @@ export function ChatUI() {
         }}
       />
 
-      <MessagesScrollView />
+      <MessagesScrollView messages={messages} />
 
-      <ChatToolbar />
+      <ChatToolbar
+        messages={messages}
+        setMessages={setMessages}
+        input={input}
+        setInput={setInput}
+        handleSubmit={handleSubmit}
+        isLoading={isLoading}
+      />
     </ChatContainer>
   );
 }
 
-function ChatToolbar() {
-  const [messages, setMessages] = useUIState<typeof AI>();
-  const { onSubmit } = useActions<typeof AI>();
-
+function ChatToolbar({
+  messages,
+  setMessages,
+  input,
+  setInput,
+  handleSubmit,
+  isLoading,
+}: {
+  messages: ReturnType<typeof useChat>["messages"];
+  setMessages: ReturnType<typeof useChat>["setMessages"];
+  input?: string;
+  setInput: (input: string) => void;
+  handleSubmit: (e: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>) => void;
+  isLoading: boolean;
+}) {
   return (
     <ChatToolbarInner
       messages={messages}
       setMessages={setMessages}
-      onSubmit={onSubmit}
+      input={input}
+      setInput={setInput}
+      handleSubmit={handleSubmit}
+      isLoading={isLoading}
     />
   );
 }

@@ -3,10 +3,9 @@
 import { nanoid } from "@/util/nanoid";
 import { tw } from "@/util/tw";
 import * as AC from "@bacons/apple-colors";
-import { useActions, useUIState } from "ai/rsc";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef } from "react";
 import {
   NativeSyntheticEvent,
   TextInput,
@@ -19,28 +18,32 @@ import Animated, {
   useAnimatedStyle,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { AI } from "./ai-context";
+import type { Message } from "ai";
 import { FirstSuggestions } from "./first-suggestions";
 import { IconSymbol } from "./ui/IconSymbol";
 import TouchableBounce from "./ui/TouchableBounce";
-import { UserMessage } from "./user-message";
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 interface ChatToolbarInnerProps {
-  messages: ReturnType<typeof useUIState<typeof AI>>[0];
-  setMessages: ReturnType<typeof useUIState<typeof AI>>[1];
-  onSubmit: ReturnType<typeof useActions<typeof AI>>["onSubmit"];
+  messages: Message[];
+  setMessages: (messages: Message[]) => void;
+  input?: string;
+  setInput: (input: string) => void;
+  handleSubmit: (e: React.FormEvent<HTMLFormElement> | React.MouseEvent<HTMLButtonElement>) => void;
+  isLoading?: boolean;
   disabled?: boolean;
 }
 
 export function ChatToolbarInner({
   messages,
   setMessages,
-  onSubmit,
+  input,
+  setInput,
+  handleSubmit,
+  isLoading = false,
   disabled = false,
 }: ChatToolbarInnerProps) {
-  const [inputValue, setInputValue] = useState("");
   const textInput = useRef<TextInput>(null);
   const { bottom } = useSafeAreaInsets();
   const keyboard = useAnimatedKeyboard();
@@ -69,7 +72,7 @@ export function ChatToolbarInner({
 
   const onSubmitMessage = useCallback(
     (value: string) => {
-      if (value.trim() === "") {
+      if (value.trim() === "" || isLoading) {
         textInput.current?.blur();
         return;
       }
@@ -82,21 +85,12 @@ export function ChatToolbarInner({
         textInput.current?.clear();
       });
 
-      setMessages((currentMessages) => [
-        ...currentMessages,
-        {
-          id: nanoid(),
-          display: <UserMessage>{value}</UserMessage>,
-        },
-      ]);
-
-      onSubmit(value).then((responseMessage) => {
-        setMessages((currentMessages) => [...currentMessages, responseMessage]);
-      });
-
-      setInputValue("");
+      // useChat's handleSubmit will handle adding the message
+      setInput(value);
+      // Trigger submit
+      handleSubmit({ preventDefault: () => {} } as any);
     },
-    [textInput, setMessages, onSubmit]
+    [textInput, setInput, handleSubmit, isLoading]
   );
 
   const onSubmitEditing = useCallback(
@@ -156,7 +150,8 @@ export function ChatToolbarInner({
         >
           <TextInput
             ref={textInput}
-            onChangeText={setInputValue}
+            value={input || ""}
+            onChangeText={setInput}
             keyboardAppearance={theme ?? "light"}
             cursorColor={AC.label}
             returnKeyType="send"
@@ -164,7 +159,7 @@ export function ChatToolbarInner({
             selectionHandleColor={AC.label}
             selectionColor={AC.label}
             style={{
-              pointerEvents: disabled ? "none" : "auto",
+              pointerEvents: disabled || isLoading ? "none" : "auto",
               color: AC.label,
               padding: 16,
               borderColor: AC.separator,
@@ -181,11 +176,12 @@ export function ChatToolbarInner({
             autoCorrect
             placeholderTextColor={AC.systemGray2}
             onSubmitEditing={onSubmitEditing}
+            editable={!isLoading}
           />
 
           <SendButton
-            enabled={!!inputValue.length}
-            onPress={() => onSubmitMessage(inputValue)}
+            enabled={!!(input?.length) && !isLoading}
+            onPress={() => onSubmitMessage(input || "")}
           />
         </View>
       </AnimatedBlurView>

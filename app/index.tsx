@@ -25,10 +25,9 @@ function Loading() {
         disabled
         messages={[]}
         setMessages={() => {}}
-        onSubmit={async () => ({
-          id: Math.random().toString(36).slice(2),
-          display: <></>,
-        })}
+        input=""
+        setInput={() => {}}
+        handleSubmit={() => {}}
       />
     </ChatContainer>
   );
