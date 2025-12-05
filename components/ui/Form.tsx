@@ -243,8 +243,9 @@ export function Link({
               }
             }
       }
-      children={resolvedChildren}
-    />
+    >
+      {resolvedChildren}
+    </RouterLink>
   );
 }
 
@@ -473,8 +474,9 @@ export function Section({
         },
         props.style,
       ]}
-      children={childrenWithSeparator}
-    />
+    >
+      {childrenWithSeparator}
+    </View>
   );
 
   if (!title && !footer) {

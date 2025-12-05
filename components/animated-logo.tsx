@@ -8,9 +8,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 
-import Animated from "react-native-reanimated";
-
-import {
+import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,

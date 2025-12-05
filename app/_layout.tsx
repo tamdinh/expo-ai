@@ -1,3 +1,4 @@
+import "../polyfills";
 import * as Form from "@/components/ui/Form";
 import { IconSymbol } from "@/components/ui/IconSymbol";
 import Stack from "@/components/ui/Stack";
@@ -27,7 +28,7 @@ export default function Layout() {
           name="index"
           options={{
             headerLargeStyle: {
-              backgroundColor: AC.systemGroupedBackground,
+              backgroundColor: AC.systemGroupedBackground as unknown as string,
             },
             headerBlurEffect: undefined,
 
@@ -60,7 +61,7 @@ export default function Layout() {
             headerTransparent: false,
 
             headerLargeStyle: {
-              backgroundColor: AC.systemGroupedBackground,
+              backgroundColor: AC.systemGroupedBackground as unknown as string,
             },
             presentation: "modal",
           }}

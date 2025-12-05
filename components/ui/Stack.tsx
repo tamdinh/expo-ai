@@ -59,8 +59,9 @@ export default function Stack({
         ...screenOptions,
       }}
       {...props}
-      children={processedChildren}
-    />
+    >
+      {processedChildren}
+    </NativeStack>
   );
 }
 

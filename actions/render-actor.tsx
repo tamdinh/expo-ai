@@ -35,7 +35,6 @@ export async function renderPersonDetails(id: string) {
             }}
           >
             <Image
-              transition={200}
               source={{
                 uri: `https://image.tmdb.org/t/p/original${person.profile_path}`,
               }}
